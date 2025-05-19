@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import DashboardLayout from "@/components/layouts/dashboard-layout";
 import DashboardHeader from "@/components/dashboard/dashboard-header";
 import DashboardStats from "@/components/dashboard/dashboard-stats";
@@ -12,6 +12,9 @@ export default function DashboardPage() {
   const { customers, fetchCustomers } = useCustomerStore();
   const { fetchProducts } = useProductStore();
 
+  // Tambahkan state untuk search query
+  const [searchQuery, setSearchQuery] = useState("");
+
   useEffect(() => {
     fetchCustomers();
     fetchProducts();
@@ -20,7 +23,10 @@ export default function DashboardPage() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <DashboardHeader />
+        <DashboardHeader
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+        />
         <DashboardStats />
         <CustomerTable customers={customers} />
       </div>

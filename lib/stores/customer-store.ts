@@ -9,9 +9,17 @@ interface CustomerStore {
   loading: boolean;
   error: string | null;
   fetchCustomers: () => Promise<void>;
-  addCustomer: (customer: Omit<Customer, "id" | "totalOrders" | "totalSpent" | "orderedProducts">) => Promise<void>;
+  addCustomer: (
+    customer: Omit<
+      Customer,
+      "id" | "totalOrders" | "totalSpent" | "orderedProducts"
+    >
+  ) => Promise<void>;
   deleteCustomer: (id: string) => Promise<void>;
-  updateCustomerProducts: (customerId: string, products: OrderedProduct[]) => Promise<void>;
+  updateCustomerProducts: (
+    customerId: string,
+    products: OrderedProduct[]
+  ) => Promise<void>;
 }
 
 export const useCustomerStore = create<CustomerStore>((set, get) => ({
@@ -23,8 +31,9 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const { data, error } = await supabase
-        .from('customers')
-        .select(`
+        .from("customers")
+        .select(
+          `
           *,
           transactions:transactions(
             id,
@@ -35,12 +44,14 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
               products:products(*)
             )
           )
-        `)
-        .is('deleted_at', null);
+        `
+        )
+        .is("deleted_at", null);
 
       if (error) throw error;
 
-      const customers: Customer[] = data.map(customer => ({
+      // Pastikan tipe data customer dan transaksi sudah benar
+      const customers: Customer[] = data.map((customer: any) => ({
         id: customer.id,
         name: customer.name,
         email: customer.email,
@@ -48,15 +59,19 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
         phone: customer.phone || '',
         address: customer.address || '',
         totalOrders: customer.transactions?.length || 0,
-        totalSpent: customer.transactions?.reduce((sum, t) => sum + (t.total_amount || 0), 0) || 0,
-        orderedProducts: customer.transactions?.flatMap(t => 
-          t.transaction_items.map(item => ({
+        // Define `totalSpent` dengan tipe yang benar
+        totalSpent: customer.transactions?.reduce(
+          (sum: number, t: { total_amount: number }) => sum + (t.total_amount || 0),
+          0
+        ) || 0,
+        orderedProducts: customer.transactions?.flatMap((t: any) =>
+          t.transaction_items.map((item: { products: { id: string; name: string; price: number }; quantity: number }) => ({
             id: item.products.id,
             name: item.products.name,
             price: item.products.price,
-            quantity: item.quantity
+            quantity: item.quantity,
           }))
-        ) || []
+        ) || [],
       }));
 
       set({ customers, loading: false });
@@ -69,7 +84,7 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const { data, error } = await supabase
-        .from('customers')
+        .from("customers")
         .insert([customer])
         .select()
         .single();
@@ -80,12 +95,12 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
         ...data,
         totalOrders: 0,
         totalSpent: 0,
-        orderedProducts: []
+        orderedProducts: [],
       };
 
-      set(state => ({
+      set((state) => ({
         customers: [...state.customers, newCustomer],
-        loading: false
+        loading: false,
       }));
     } catch (error) {
       set({ error: (error as Error).message, loading: false });
@@ -96,15 +111,15 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const { error } = await supabase
-        .from('customers')
+        .from("customers")
         .update({ deleted_at: new Date().toISOString() })
-        .eq('id', id);
+        .eq("id", id);
 
       if (error) throw error;
 
-      set(state => ({
-        customers: state.customers.filter(c => c.id !== id),
-        loading: false
+      set((state) => ({
+        customers: state.customers.filter((c) => c.id !== id),
+        loading: false,
       }));
     } catch (error) {
       set({ error: (error as Error).message, loading: false });
@@ -116,11 +131,14 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
     try {
       // Create a new transaction
       const { data: transaction, error: transactionError } = await supabase
-        .from('transactions')
+        .from("transactions")
         .insert({
           customer_id: customerId,
-          total_amount: products.reduce((sum, p) => sum + (p.price * p.quantity), 0),
-          status: 'completed'
+          total_amount: products.reduce(
+            (sum: number, p: OrderedProduct) => sum + p.price * p.quantity,
+            0
+          ),
+          status: "completed",
         })
         .select()
         .single();
@@ -128,15 +146,15 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
       if (transactionError) throw transactionError;
 
       // Create transaction items
-      const transactionItems = products.map(product => ({
+      const transactionItems = products.map((product: OrderedProduct) => ({
         transaction_id: transaction.id,
         product_id: product.id,
         quantity: product.quantity,
-        price: product.price
+        price: product.price,
       }));
 
       const { error: itemsError } = await supabase
-        .from('transaction_items')
+        .from("transaction_items")
         .insert(transactionItems);
 
       if (itemsError) throw itemsError;
@@ -146,5 +164,5 @@ export const useCustomerStore = create<CustomerStore>((set, get) => ({
     } catch (error) {
       set({ error: (error as Error).message, loading: false });
     }
-  }
+  },
 }));

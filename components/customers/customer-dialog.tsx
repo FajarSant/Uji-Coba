@@ -67,19 +67,16 @@ export default function CustomerDialog({ open, onOpenChange }: CustomerDialogPro
     setIsSubmitting(true);
     
     try {
-      // In a real app, this would be an API call
+      // Simulasi API call
       await new Promise(resolve => setTimeout(resolve, 500));
       
+      // Kirim hanya properti yang dibolehkan oleh store
       addCustomer({
-        id: Date.now().toString(),
         name: data.name,
         email: data.email,
         status: data.status,
         phone: data.phone,
         address: data.address,
-        totalOrders: 0,
-        totalSpent: 0,
-        orderedProducts: [],
       });
       
       toast({
